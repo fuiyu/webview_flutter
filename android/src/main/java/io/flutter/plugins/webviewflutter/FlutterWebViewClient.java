@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.os.Build;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -105,6 +106,15 @@ class FlutterWebViewClient {
     return internalCreateWebViewClientCompat();
   }
 
+
+  WebChromeClient createWebChromeClient() {
+    return new WebChromeClient(){
+      @Override
+      public Bitmap getDefaultVideoPoster() {
+        return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+      }
+    };
+  }
   private WebViewClient internalCreateWebViewClient() {
     return new WebViewClient() {
       @TargetApi(Build.VERSION_CODES.N)

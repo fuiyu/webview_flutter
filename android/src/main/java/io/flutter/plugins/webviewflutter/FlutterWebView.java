@@ -10,6 +10,7 @@ import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Handler;
 import android.view.View;
+import android.webkit.WebChromeClient;
 import android.webkit.WebStorage;
 import android.webkit.WebViewClient;
 import io.flutter.plugin.common.BinaryMessenger;
@@ -265,8 +266,12 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
 
           final WebViewClient webViewClient =
               flutterWebViewClient.createWebViewClient(hasNavigationDelegate);
-
           webView.setWebViewClient(webViewClient);
+
+          if(android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+            final WebChromeClient webChromeClient = flutterWebViewClient.createWebChromeClient();
+            webView.setWebChromeClient(webChromeClient);
+          }
           break;
         case "debuggingEnabled":
           final boolean debuggingEnabled = (boolean) settings.get(key);
