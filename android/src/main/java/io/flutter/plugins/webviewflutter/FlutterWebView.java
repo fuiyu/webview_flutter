@@ -5,12 +5,12 @@
 package io.flutter.plugins.webviewflutter;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Handler;
 import android.view.View;
-import android.webkit.WebChromeClient;
 import android.webkit.WebStorage;
 import android.webkit.WebViewClient;
 import io.flutter.plugin.common.BinaryMessenger;
@@ -22,6 +22,7 @@ import io.flutter.plugin.platform.PlatformView;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import android.webkit.WebChromeClient;
 
 public class FlutterWebView implements PlatformView, MethodCallHandler {
   private static final String JS_CHANNEL_NAMES_FIELD = "javascriptChannelNames";
@@ -33,11 +34,12 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
   @SuppressWarnings("unchecked")
   FlutterWebView(
-      final Context context,
-      BinaryMessenger messenger,
-      int id,
-      Map<String, Object> params,
-      View containerView) {
+          final Activity activity,
+          final Context context,
+          BinaryMessenger messenger,
+          int id,
+          Map<String, Object> params,
+          View containerView) {
 
     DisplayListenerProxy displayListenerProxy = new DisplayListenerProxy();
     DisplayManager displayManager =
@@ -55,7 +57,7 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     methodChannel.setMethodCallHandler(this);
 
     flutterWebViewClient = new FlutterWebViewClient(methodChannel);
-    applySettings((Map<String, Object>) params.get("settings"));
+    applySettings((Map<String, Object>) params.get("settings"), context, activity);
 
     if (params.containsKey(JS_CHANNEL_NAMES_FIELD)) {
       registerJavaScriptChannelNames((List<String>) params.get(JS_CHANNEL_NAMES_FIELD));
@@ -209,7 +211,7 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
 
   @SuppressWarnings("unchecked")
   private void updateSettings(MethodCall methodCall, Result result) {
-    applySettings((Map<String, Object>) methodCall.arguments);
+    applySettings((Map<String, Object>) methodCall.arguments, null, null);
     result.success(null);
   }
 
@@ -255,7 +257,7 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
     result.success(webView.getTitle());
   }
 
-  private void applySettings(Map<String, Object> settings) {
+  private void applySettings(Map<String, Object> settings,Context context, Activity activity) {
     for (String key : settings.keySet()) {
       switch (key) {
         case "jsMode":
@@ -266,12 +268,11 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
 
           final WebViewClient webViewClient =
               flutterWebViewClient.createWebViewClient(hasNavigationDelegate);
-          webView.setWebViewClient(webViewClient);
-
           if(android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
-            final WebChromeClient webChromeClient = flutterWebViewClient.createWebChromeClient();
+            WebChromeClient webChromeClient = flutterWebViewClient.createWebChromeClient(context, activity);
             webView.setWebChromeClient(webChromeClient);
           }
+          webView.setWebViewClient(webViewClient);
           break;
         case "debuggingEnabled":
           final boolean debuggingEnabled = (boolean) settings.get(key);
