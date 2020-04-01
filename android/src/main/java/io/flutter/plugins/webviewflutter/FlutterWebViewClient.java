@@ -50,7 +50,7 @@ class FlutterWebViewClient {
       return false;
     }
     notifyOnNavigationRequest(
-            request.getUrl().toString(), request.getRequestHeaders(), view, request.isForMainFrame());
+        request.getUrl().toString(), request.getRequestHeaders(), view, request.isForMainFrame());
     // We must make a synchronous decision here whether to allow the navigation or not,
     // if the Dart code has set a navigation delegate we want that delegate to decide whether
     // to navigate or not, and as we cannot get a response from the Dart delegate synchronously we
@@ -75,8 +75,8 @@ class FlutterWebViewClient {
     // We proceed assuming that the navigation is targeted to the main frame. If the page had any
     // frames they will be loaded in the main frame instead.
     Log.w(
-            TAG,
-            "Using a navigationDelegate with an old webview implementation, pages with frames or iframes will not work");
+        TAG,
+        "Using a navigationDelegate with an old webview implementation, pages with frames or iframes will not work");
     notifyOnNavigationRequest(url, null, view, true);
     return true;
   }
@@ -95,13 +95,13 @@ class FlutterWebViewClient {
   }
 
   private void notifyOnNavigationRequest(
-          String url, Map<String, String> headers, WebView webview, boolean isMainFrame) {
+      String url, Map<String, String> headers, WebView webview, boolean isMainFrame) {
     HashMap<String, Object> args = new HashMap<>();
     args.put("url", url);
     args.put("isForMainFrame", isMainFrame);
     if (isMainFrame) {
       methodChannel.invokeMethod(
-              "navigationRequest", args, new OnNavigationRequestResult(url, headers, webview));
+          "navigationRequest", args, new OnNavigationRequestResult(url, headers, webview));
     } else {
       methodChannel.invokeMethod("navigationRequest", args);
     }
@@ -121,37 +121,13 @@ class FlutterWebViewClient {
   }
   WebChromeClient createWebChromeClient(final Context context, final Activity activity) {
 
-    return new WebChromeClient(){
-      WebChromeClient.CustomViewCallback mCallback;
-      @Override
-      public void onShowCustomView(View view, CustomViewCallback callback) {
-        Log.i("ToVmp","onShowCustomView");
-        super.onShowCustomView(view, callback);
-        if (mCustomView != null) {
-          callback.onCustomViewHidden();
-          return;
-        }
-        mCustomView = view;
-        activity.addView(mCustomView);
-        mCustomViewCallback = callback;
-        wvBookPlay.setVisibility(View.GONE);
-        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-      }
-
-      @Override
-      public void onHideCustomView() {
-        Log.i("ToVmp","onHideCustomView");
-        super.onHideCustomView();
-        wvBookPlay.setVisibility(View.VISIBLE);
-        flVideoContainer.setVisibility(View.GONE);
-        flVideoContainer.removeAllViews();
-        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-      }
-      @Override
-      public Bitmap getDefaultVideoPoster() {
-        return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
-      }
-    };
+      return new WebChromeClient(){
+          WebChromeClient.CustomViewCallback mCallback;
+          @Override
+          public Bitmap getDefaultVideoPoster() {
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+          }
+      };
   }
 
 
@@ -240,7 +216,7 @@ class FlutterWebViewClient {
     @Override
     public void notImplemented() {
       throw new IllegalStateException(
-              "navigationRequest must be implemented by the webview method channel");
+          "navigationRequest must be implemented by the webview method channel");
     }
 
     private void loadUrl() {
