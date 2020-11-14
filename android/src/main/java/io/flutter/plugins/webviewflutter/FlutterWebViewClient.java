@@ -4,29 +4,24 @@
 
 package io.flutter.plugins.webviewflutter;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.app.Activity;
-import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.util.Log;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.view.KeyEvent;
-import android.view.MotionEvent;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import androidx.annotation.RequiresApi;
+import androidx.webkit.WebResourceErrorCompat;
 import androidx.webkit.WebViewClientCompat;
 import io.flutter.plugin.common.MethodChannel;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
-import android.webkit.WebChromeClient;
-import android.widget.FrameLayout;
-import android.content.Context;
-import android.content.pm.ApplicationInfo;
+
 // We need to use WebViewClientCompat to get
 // shouldOverrideUrlLoading(WebView view, WebResourceRequest request)
 // invoked by the webview on older Android devices, without it pages that use iframes will
@@ -36,16 +31,53 @@ class FlutterWebViewClient {
   private final MethodChannel methodChannel;
   private boolean hasNavigationDelegate;
 
-  private WebView wvBookPlay;
-  private FrameLayout flVideoContainer;
-  private View mCustomView;
-  private WebChromeClient.CustomViewCallback mCustomViewCallback;
   FlutterWebViewClient(MethodChannel methodChannel) {
     this.methodChannel = methodChannel;
   }
 
+  private static String errorCodeToString(int errorCode) {
+    switch (errorCode) {
+      case WebViewClient.ERROR_AUTHENTICATION:
+        return "authentication";
+      case WebViewClient.ERROR_BAD_URL:
+        return "badUrl";
+      case WebViewClient.ERROR_CONNECT:
+        return "connect";
+      case WebViewClient.ERROR_FAILED_SSL_HANDSHAKE:
+        return "failedSslHandshake";
+      case WebViewClient.ERROR_FILE:
+        return "file";
+      case WebViewClient.ERROR_FILE_NOT_FOUND:
+        return "fileNotFound";
+      case WebViewClient.ERROR_HOST_LOOKUP:
+        return "hostLookup";
+      case WebViewClient.ERROR_IO:
+        return "io";
+      case WebViewClient.ERROR_PROXY_AUTHENTICATION:
+        return "proxyAuthentication";
+      case WebViewClient.ERROR_REDIRECT_LOOP:
+        return "redirectLoop";
+      case WebViewClient.ERROR_TIMEOUT:
+        return "timeout";
+      case WebViewClient.ERROR_TOO_MANY_REQUESTS:
+        return "tooManyRequests";
+      case WebViewClient.ERROR_UNKNOWN:
+        return "unknown";
+      case WebViewClient.ERROR_UNSAFE_RESOURCE:
+        return "unsafeResource";
+      case WebViewClient.ERROR_UNSUPPORTED_AUTH_SCHEME:
+        return "unsupportedAuthScheme";
+      case WebViewClient.ERROR_UNSUPPORTED_SCHEME:
+        return "unsupportedScheme";
+    }
+
+    final String message =
+        String.format(Locale.getDefault(), "Could not find a string for errorCode: %d", errorCode);
+    throw new IllegalArgumentException(message);
+  }
+
   @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-  private boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+  boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
     if (!hasNavigationDelegate) {
       return false;
     }
@@ -65,7 +97,7 @@ class FlutterWebViewClient {
     return request.isForMainFrame();
   }
 
-  private boolean shouldOverrideUrlLoading(WebView view, String url) {
+  boolean shouldOverrideUrlLoading(WebView view, String url) {
     if (!hasNavigationDelegate) {
       return false;
     }
@@ -82,7 +114,6 @@ class FlutterWebViewClient {
   }
 
   private void onPageStarted(WebView view, String url) {
-    wvBookPlay = view;
     Map<String, Object> args = new HashMap<>();
     args.put("url", url);
     methodChannel.invokeMethod("onPageStarted", args);
@@ -92,6 +123,16 @@ class FlutterWebViewClient {
     Map<String, Object> args = new HashMap<>();
     args.put("url", url);
     methodChannel.invokeMethod("onPageFinished", args);
+  }
+
+  private void onWebResourceError(
+      final int errorCode, final String description, final String failingUrl) {
+    final Map<String, Object> args = new HashMap<>();
+    args.put("errorCode", errorCode);
+    args.put("description", description);
+    args.put("errorType", FlutterWebViewClient.errorCodeToString(errorCode));
+    args.put("failingUrl", failingUrl);
+    methodChannel.invokeMethod("onWebResourceError", args);
   }
 
   private void notifyOnNavigationRequest(
@@ -119,17 +160,6 @@ class FlutterWebViewClient {
 
     return internalCreateWebViewClientCompat();
   }
-  WebChromeClient createWebChromeClient(final Context context, final Activity activity) {
-
-      return new WebChromeClient(){
-          WebChromeClient.CustomViewCallback mCallback;
-          @Override
-          public Bitmap getDefaultVideoPoster() {
-            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
-          }
-      };
-  }
-
 
   private WebViewClient internalCreateWebViewClient() {
     return new WebViewClient() {
@@ -147,6 +177,20 @@ class FlutterWebViewClient {
       @Override
       public void onPageFinished(WebView view, String url) {
         FlutterWebViewClient.this.onPageFinished(view, url);
+      }
+
+      @TargetApi(Build.VERSION_CODES.M)
+      @Override
+      public void onReceivedError(
+          WebView view, WebResourceRequest request, WebResourceError error) {
+        FlutterWebViewClient.this.onWebResourceError(
+            error.getErrorCode(), error.getDescription().toString(), request.getUrl().toString());
+      }
+
+      @Override
+      public void onReceivedError(
+          WebView view, int errorCode, String description, String failingUrl) {
+        FlutterWebViewClient.this.onWebResourceError(errorCode, description, failingUrl);
       }
 
       @Override
@@ -178,6 +222,23 @@ class FlutterWebViewClient {
       @Override
       public void onPageFinished(WebView view, String url) {
         FlutterWebViewClient.this.onPageFinished(view, url);
+      }
+
+      // This method is only called when the WebViewFeature.RECEIVE_WEB_RESOURCE_ERROR feature is
+      // enabled. The deprecated method is called when a device doesn't support this.
+      @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+      @SuppressLint("RequiresFeature")
+      @Override
+      public void onReceivedError(
+          WebView view, WebResourceRequest request, WebResourceErrorCompat error) {
+        FlutterWebViewClient.this.onWebResourceError(
+            error.getErrorCode(), error.getDescription().toString(), request.getUrl().toString());
+      }
+
+      @Override
+      public void onReceivedError(
+          WebView view, int errorCode, String description, String failingUrl) {
+        FlutterWebViewClient.this.onWebResourceError(errorCode, description, failingUrl);
       }
 
       @Override
