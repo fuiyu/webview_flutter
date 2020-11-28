@@ -26,6 +26,7 @@ import io.flutter.plugin.platform.PlatformView;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import android.graphics.Bitmap;
 
 public class FlutterWebView implements PlatformView, MethodCallHandler {
   private static final String JS_CHANNEL_NAMES_FIELD = "javascriptChannelNames";
@@ -36,6 +37,10 @@ public class FlutterWebView implements PlatformView, MethodCallHandler {
 
   // Verifies that a url opened by `Window.open` has a secure url.
   private class FlutterWebChromeClient extends WebChromeClient {
+    @Override
+    public Bitmap getDefaultVideoPoster() {
+      return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+    }
     @Override
     public boolean onCreateWindow(
         final WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
